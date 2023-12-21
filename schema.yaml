@@ -1,0 +1,225 @@
+title: Deploy ScyllaDB & API Gateway to OCI
+description: Setup ScyllaDB's DynamoDB compatible API and expose it over an API Gateway.
+informationalText: Automate the deployment of ScyllaDB to an OCI instance using docker compose.
+schemaVersion: 1.1.0
+version: "20190304"
+
+locale: "en"
+variableGroups:
+  - title: "Hidden"
+    visible: false
+    variables:
+      - tenancy_ocid
+      - compartment_ocid
+      - region
+      - current_user_ocid 
+      - freeform_tags
+      - defined_tags
+
+  - title: "Network Setup"
+    visible: true
+    variables:
+      - ${create_vcn}
+
+  - title: "New VCN Setup"
+    variables:
+      - ${network_compartment_id}
+      - ${vcn_name}
+      - ${vcn_cidr}
+    visible:
+      not:
+        - not:
+          - ${create_vcn}
+  
+  - title: "Use existing network resources"
+    variables:
+      - ${network_compartment_id}
+      - ${vcn_id}
+      - ${existing_pub_subnet}
+      - ${existing_priv_subnet}
+    visible:
+      not:
+        - ${create_vcn}
+  
+  - title: "ScyllaDB Setup"
+    variables:
+      - ${compartment_id}
+      - ${instance_display_name}
+      - ${ssh_public_keys}
+
+  - title: "API Gateway Setup"
+    variables:
+      - ${apigw_display_name}
+
+  - title: "Object Storage Setup"
+    visible: true
+    variables:
+      - ${create_bucket}
+
+  - title: "New Object Storage bucket setup"
+    visible:
+      not:
+        - not:
+          - ${create_bucket}
+
+    variables:
+      - ${bucket_name}
+
+  - title: "Misc"
+    visible: true
+    variables:
+      - ${AWS_ACCESS_KEY}
+      - ${AWS_SECRET_KEY}
+      - ${TF_STATE_TABLE}
+      - ${append_suffix}
+
+variables:
+  compartment_id:
+    type: oci:identity:compartment:id
+    title: "Please select the deploymnet compartment."
+    required: true
+
+  create_vcn:
+    title: Create new OCI network resources?
+    type: boolean
+    required: true
+    default: true
+
+  network_compartment_id:
+    type: oci:identity:compartment:id
+    title: "Please select the deploymnet compartment for the networking resources."
+    required: false
+
+  vcn_name:
+    type: string
+    minLength: 3
+    maxLength: 25
+    pattern: ^[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]$
+    title: "Name of the new VCN."
+    default: "tf-locking-demo"
+    required: true
+
+  vcn_cidr:
+    type: string
+    pattern: ^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)([/][1][6-9]|[/][2][0-9])$
+    title: "VCN CIDR block."
+    default: "10.0.0.0/16"
+    required: true
+
+  vcn_id:
+    title: Existing VCN to use for the ScyllaDB deployment.
+    required: false
+    type: oci:core:vcn:id
+    dependsOn:
+      compartmentId: ${network_compartment_id}
+
+  existing_pub_subnet:
+    title: "Select an existing public subnet."
+    type: oci:core:subnet:id
+    required: false
+    dependsOn:
+      compartmentId: ${network_compartment_id}
+      vcnId: ${vcn_id}
+      hidePublicSubnet: false
+      hidePrivateSubnet: true
+
+  existing_priv_subnet:
+    title: "Select an existing private subnet."
+    type: oci:core:subnet:id
+    required: false
+    dependsOn:
+      compartmentId: ${network_compartment_id}
+      vcnId: ${vcn_id}
+      hidePublicSubnet: true
+      hidePrivateSubnet: false
+
+  instance_display_name:
+    type: string
+    title: "ScyllaDB instance name."
+    pattern: ^[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]$
+    default: scyllaDB
+    required: true
+
+  ssh_public_keys:
+    title: SSH Public Key
+    type: oci:core:ssh:publickey
+    required: true
+
+  AWS_ACCESS_KEY:
+    type: string
+    title: "OCI S3 Compatible API Secret Key."
+    description: "https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcredentials.htm#Working2"
+    pattern: ^[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]$
+    required: true
+
+  AWS_SECRET_KEY:
+    type: password
+    title: "OCI S3 Compatible API Secret Key."
+    description: "https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcredentials.htm#Working2"
+    required: true
+
+  TF_STATE_TABLE:
+    type: string
+    title: "ScyllaDB table name where to store tfstate file locking information."
+    pattern: ^[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]$
+    required: true
+    default: s3-locking-demo
+
+  apigw_display_name:
+    title: The name of the API Gateway resource.
+    type: string
+    pattern: ^[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]$
+    required: true
+    default: scyllaDB-APIGW
+
+  create_bucket:
+    title: Create a new bucket?
+    type: boolean
+    required: true
+    default: true
+  
+  bucket_name:
+    title: The name of the new bucket.
+    type: string
+    pattern: ^[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]$
+    required: true
+    default: tf-state-bucket
+
+  append_suffix:
+    title: Append a random suffix to the created resources?
+    type: boolean
+    required: true
+    default: true
+
+outputs:
+  s3_endpoint:
+    type: link
+    title: S3 endpoint to be used for Terraform S3 backend
+
+  dynamodb_endpoint:
+    type: link
+    title: dynamodb endpoint to be used for Terraform S3 backend
+
+  scyllaDB_private_ip:
+    type: string
+    title: The private IP address of the ScyllaDB instance
+  
+  bucket_name:
+    type: string
+    title: The name of the new created object storage bucket
+  
+  terraform_sample:
+    type: string
+    title: Sample Terraform code to execute from OCI Cloud Shell
+
+outputGroups:
+- title: "Deployment outputs"
+  outputs:
+    - s3_endpoint
+    - dynamodb_endpoint
+    - scyllaDB_private_ip
+    - bucket_name
+
+- title: "Terraform Sample Code"
+  outputs:
+    - terraform_sample
