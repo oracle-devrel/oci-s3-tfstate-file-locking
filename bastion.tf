@@ -11,7 +11,7 @@ resource "oci_bastion_bastion" "bastion" {
 
   bastion_type                 = "STANDARD"
   compartment_id               = coalesce(var.network_compartment_id, local.compartment_id)
-  target_subnet_id             = var.create_vcn ? module.vcn[0].subnet_id["public-sn"] : var.existing_pub_subnet
+  target_subnet_id             = var.create_vcn ? module.vcn[0].subnet_id["private-sn"] : var.existing_priv_subnet
   name                         = var.append_suffix ? "${var.instance_display_name}-bastion-${random_string.state_id.id}" : "${var.instance_display_name}-bastion"
   client_cidr_block_allow_list = ["0.0.0.0/0"]
 
