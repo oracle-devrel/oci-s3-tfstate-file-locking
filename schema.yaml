@@ -147,7 +147,7 @@ variables:
 
   AWS_ACCESS_KEY:
     type: string
-    title: "OCI S3 Compatible API Secret Key."
+    title: "OCI S3 Compatible API Access Key."
     description: "https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcredentials.htm#Working2"
     pattern: ^[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]$
     required: true
