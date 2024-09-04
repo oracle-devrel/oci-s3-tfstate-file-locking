@@ -109,7 +109,7 @@ data "cloudinit_config" "scyllaDB" {
       write_files = [
         {
           content = <<-EOT
-              FROM scylladb/scylla:latest
+              FROM scylladb/scylla:5.2.8
               RUN echo "alternator_enforce_authorization: true" >> /etc/scylla/scylla.yaml
               ENTRYPOINT ["/docker-entrypoint.py"]
             EOT
@@ -145,7 +145,7 @@ data "cloudinit_config" "scyllaDB" {
                     - "9042:9042"
 
                 scylladb-load-user:
-                  image: "scylladb/scylla:latest"
+                  image: "scylladb/scylla:5.2.8"
                   container_name: "scylladb-load-user"
                   depends_on:
                     - scylladb
